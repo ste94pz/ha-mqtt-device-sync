@@ -147,26 +147,45 @@ class MqttDeviceSyncCoordinator:
         if not isinstance(payload, dict):
             return
 
-        device_info = payload.get("device")
+        # Handle abbreviated 'dev' or full 'device' key
+        device_info = payload.get("device") or payload.get("dev")
         if not device_info or not isinstance(device_info, dict):
             return
 
-        identifiers = device_info.get("identifiers")
-        if not identifiers:
+        # Handle abbreviated 'ids' or full 'identifiers' key
+        identifiers = device_info.get("identifiers") or device_info.get("ids")
+
+        # Fall back to 'connections' / 'cns' if no identifiers
+        # connections format: [["mac", "aa:bb:cc:dd:ee:ff"], ...]
+        connections = device_info.get("connections") or device_info.get("cns")
+
+        if not identifiers and not connections:
             return
 
         # Normalize identifiers to frozenset of tuples
-        if isinstance(identifiers, str):
-            identifier_set = frozenset({("mqtt", identifiers)})
-        elif isinstance(identifiers, list):
-            identifier_set = frozenset(
-                ("mqtt", i) if isinstance(i, str) else tuple(i)
-                for i in identifiers
-            )
-        else:
-            return
+        if identifiers:
+            if isinstance(identifiers, str):
+                identifier_set = frozenset({("mqtt", identifiers)})
+            elif isinstance(identifiers, list):
+                identifier_set = frozenset(
+                    ("mqtt", i) if isinstance(i, str) else tuple(i)
+                    for i in identifiers
+                )
+            else:
+                return
+        elif connections:
+            # Use connections as identifiers (e.g., [["mac", "aa:bb:cc"]])
+            if isinstance(connections, list):
+                identifier_set = frozenset(
+                    tuple(c) for c in connections if isinstance(c, list) and len(c) == 2
+                )
+            else:
+                return
+            if not identifier_set:
+                return
 
-        suggested_area = device_info.get("suggested_area")
+        # Handle abbreviated 'sa' or full 'suggested_area' key
+        suggested_area = device_info.get("suggested_area") or device_info.get("sa")
         device_name = device_info.get("name")
         parsed_name = None
 
