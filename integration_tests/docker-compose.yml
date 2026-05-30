@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mqtt_test_broker
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: ha_test_instance
+    ports:
+      - "8123:8123"
+    volumes:
+      - ./config:/config
+      - ../custom_components:/config/custom_components:ro
+    environment:
+      - TZ=UTC
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123/api/"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: mqtt_sync_test_runner
+    depends_on:
+      homeassistant:
+        condition: service_healthy
+    environment:
+      - HA_URL=http://homeassistant:8123
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+    volumes:
+      - ./tests:/tests:ro
+      - ./results:/results

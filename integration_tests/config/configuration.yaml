@@ -1,0 +1,31 @@
+# Home Assistant test configuration
+
+homeassistant:
+  name: Test Instance
+  unit_system: metric
+  time_zone: UTC
+  auth_providers:
+    - type: homeassistant
+    - type: trusted_networks
+      trusted_networks:
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 10.0.0.0/8
+      allow_bypass_login: true
+
+# Enable API
+api:
+
+# MQTT configuration
+mqtt:
+  broker: mosquitto
+  port: 1883
+  discovery: true
+  discovery_prefix: homeassistant
+
+# Logger for debugging
+logger:
+  default: info
+  logs:
+    custom_components.mqtt_device_sync: debug
+    homeassistant.components.mqtt: debug
