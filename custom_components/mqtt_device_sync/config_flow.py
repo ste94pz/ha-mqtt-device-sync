@@ -14,11 +14,15 @@ from homeassistant.core import callback
 
 from .const import (
     CONF_DISCOVERY_PREFIX,
+    CONF_NAME_DELIMITERS,
     CONF_OVERWRITE_EXISTING,
+    CONF_PARSE_AREA_FROM_NAME,
     CONF_SYNC_AREA,
     CONF_SYNC_NAME,
     DEFAULT_DISCOVERY_PREFIX,
+    DEFAULT_NAME_DELIMITERS,
     DEFAULT_OVERWRITE_EXISTING,
+    DEFAULT_PARSE_AREA_FROM_NAME,
     DEFAULT_SYNC_AREA,
     DEFAULT_SYNC_NAME,
     DOMAIN,
@@ -87,6 +91,18 @@ class MqttDeviceSyncOptionsFlow(OptionsFlow):
                             CONF_OVERWRITE_EXISTING, DEFAULT_OVERWRITE_EXISTING
                         ),
                     ): bool,
+                    vol.Optional(
+                        CONF_PARSE_AREA_FROM_NAME,
+                        default=options.get(
+                            CONF_PARSE_AREA_FROM_NAME, DEFAULT_PARSE_AREA_FROM_NAME
+                        ),
+                    ): bool,
+                    vol.Optional(
+                        CONF_NAME_DELIMITERS,
+                        default=options.get(
+                            CONF_NAME_DELIMITERS, DEFAULT_NAME_DELIMITERS
+                        ),
+                    ): str,
                 }
             ),
         )

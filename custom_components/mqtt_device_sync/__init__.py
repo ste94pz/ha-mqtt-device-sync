@@ -16,11 +16,15 @@ from homeassistant.helpers.event import async_call_later
 
 from .const import (
     CONF_DISCOVERY_PREFIX,
+    CONF_NAME_DELIMITERS,
     CONF_OVERWRITE_EXISTING,
+    CONF_PARSE_AREA_FROM_NAME,
     CONF_SYNC_AREA,
     CONF_SYNC_NAME,
     DEFAULT_DISCOVERY_PREFIX,
+    DEFAULT_NAME_DELIMITERS,
     DEFAULT_OVERWRITE_EXISTING,
+    DEFAULT_PARSE_AREA_FROM_NAME,
     DEFAULT_SYNC_AREA,
     DEFAULT_SYNC_NAME,
     DOMAIN,
@@ -68,6 +72,63 @@ class MqttDeviceSyncCoordinator:
         """Return overwrite_existing option."""
         return self.entry.options.get(CONF_OVERWRITE_EXISTING, DEFAULT_OVERWRITE_EXISTING)
 
+    @property
+    def parse_area_from_name(self) -> bool:
+        """Return parse_area_from_name option."""
+        return self.entry.options.get(CONF_PARSE_AREA_FROM_NAME, DEFAULT_PARSE_AREA_FROM_NAME)
+
+    @property
+    def name_delimiters(self) -> list[str]:
+        """Return list of name delimiters."""
+        delim_str = self.entry.options.get(CONF_NAME_DELIMITERS, DEFAULT_NAME_DELIMITERS)
+        return [d.strip() for d in delim_str.split(",") if d.strip()]
+
+    def parse_area_from_device_name(self, name: str) -> tuple[str | None, str | None]:
+        """Parse area and device name from a device name string.
+
+        Tries delimiter-based splitting first, then matches against existing areas.
+
+        Returns:
+            tuple of (area_name, parsed_device_name) or (None, None) if no match
+        """
+        if not name:
+            return None, None
+
+        # Try delimiter-based splitting
+        for delimiter in self.name_delimiters:
+            if delimiter in name:
+                parts = name.split(delimiter, 1)
+                area = parts[0].strip()
+                device = parts[1].strip() if len(parts) > 1 else ""
+                if area and device:
+                    _LOGGER.debug(
+                        "Parsed area from name: '%s' -> area='%s', name='%s'",
+                        name, area, device
+                    )
+                    return area, device
+
+        # Try matching against existing area names (for "Laundry Motion" style)
+        area_registry = ar.async_get(self.hass)
+        areas = area_registry.async_list_areas()
+
+        # Sort by name length descending to match longest area name first
+        # e.g., "Living Room" before "Living"
+        sorted_areas = sorted(areas, key=lambda a: len(a.name), reverse=True)
+
+        for area in sorted_areas:
+            area_name = area.name
+            # Check if name starts with area name (case-insensitive)
+            if name.lower().startswith(area_name.lower()):
+                remainder = name[len(area_name):].strip()
+                if remainder:
+                    _LOGGER.debug(
+                        "Matched existing area in name: '%s' -> area='%s', name='%s'",
+                        name, area_name, remainder
+                    )
+                    return area_name, remainder
+
+        return None, None
+
     def cancel_pending(self) -> None:
         """Cancel all pending retry timers."""
         for timer in self._retry_timers.values():
@@ -107,6 +168,18 @@ class MqttDeviceSyncCoordinator:
 
         suggested_area = device_info.get("suggested_area")
         device_name = device_info.get("name")
+        parsed_name = None
+
+        # If no suggested_area and parsing is enabled, try to extract from name
+        if not suggested_area and self.parse_area_from_name and device_name:
+            parsed_area, parsed_name = self.parse_area_from_device_name(device_name)
+            if parsed_area:
+                suggested_area = parsed_area
+                _LOGGER.debug(
+                    "Using parsed area '%s' from device name '%s'",
+                    suggested_area,
+                    device_name,
+                )
 
         _LOGGER.debug(
             "Discovery: identifiers=%s, suggested_area=%s, name=%s",
@@ -116,7 +189,9 @@ class MqttDeviceSyncCoordinator:
         )
 
         self.hass.async_create_task(
-            self.async_update_device(identifier_set, suggested_area, device_name)
+            self.async_update_device(
+                identifier_set, suggested_area, device_name, parsed_name=parsed_name
+            )
         )
 
     async def async_update_device(
@@ -125,8 +200,17 @@ class MqttDeviceSyncCoordinator:
         suggested_area: str | None,
         device_name: str | None,
         retry_count: int = 0,
+        parsed_name: str | None = None,
     ) -> None:
-        """Update device registry with metadata from MQTT discovery."""
+        """Update device registry with metadata from MQTT discovery.
+
+        Args:
+            identifiers: Device identifiers
+            suggested_area: Area name from discovery or parsed from name
+            device_name: Original device name from discovery
+            retry_count: Current retry attempt
+            parsed_name: Device name parsed from "Area / Name" format (used if provided)
+        """
         device_registry = dr.async_get(self.hass)
         device = device_registry.async_get_device(identifiers=set(identifiers))
 
@@ -145,7 +229,9 @@ class MqttDeviceSyncCoordinator:
                     retry_count + 1,
                     MAX_RETRIES,
                 )
-                self._schedule_retry(identifiers, suggested_area, device_name, retry_count)
+                self._schedule_retry(
+                    identifiers, suggested_area, device_name, retry_count, parsed_name
+                )
             else:
                 _LOGGER.warning(
                     "Device not found for %s after %d retries, giving up",
@@ -160,10 +246,13 @@ class MqttDeviceSyncCoordinator:
         if identifiers in self._retry_timers:
             self._retry_timers.pop(identifiers).cancel()
 
+        # Determine effective name (parsed_name takes precedence if area was parsed)
+        effective_name = parsed_name if parsed_name else device_name
+
         # Deduplication: check if we'd make the same update
         cache_key = device.id
         cached = self.synced_state.get(cache_key)
-        if cached == (suggested_area, device_name):
+        if cached == (suggested_area, effective_name):
             _LOGGER.debug("Skipping duplicate update for device %s", device.name)
             return
 
@@ -182,18 +271,19 @@ class MqttDeviceSyncCoordinator:
                 if device.area_id != area.id:
                     updates["area_id"] = area.id
 
-        # Handle name sync
-        if self.sync_name and device_name:
+        # Handle name sync (use parsed_name if available from area parsing)
+        name_to_sync = parsed_name if parsed_name else device_name
+        if self.sync_name and name_to_sync:
             if self.overwrite or device.name_by_user is None:
-                if device.name_by_user != device_name:
-                    updates["name_by_user"] = device_name
+                if device.name_by_user != name_to_sync:
+                    updates["name_by_user"] = name_to_sync
 
         if updates:
             device_registry.async_update_device(device.id, **updates)
             _LOGGER.info("Updated device %s (%s): %s", device.name, device.id, updates)
 
         # Update cache
-        self.synced_state[cache_key] = (suggested_area, device_name)
+        self.synced_state[cache_key] = (suggested_area, effective_name)
 
     def _schedule_retry(
         self,
@@ -201,6 +291,7 @@ class MqttDeviceSyncCoordinator:
         suggested_area: str | None,
         device_name: str | None,
         retry_count: int,
+        parsed_name: str | None = None,
     ) -> None:
         """Schedule a retry for device update."""
         if identifiers in self._retry_timers:
@@ -211,7 +302,7 @@ class MqttDeviceSyncCoordinator:
             self._retry_timers.pop(identifiers, None)
             self.hass.async_create_task(
                 self.async_update_device(
-                    identifiers, suggested_area, device_name, retry_count + 1
+                    identifiers, suggested_area, device_name, retry_count + 1, parsed_name
                 )
             )
 

@@ -18,13 +18,17 @@
           "discovery_prefix": "Discovery prefix",
           "sync_area": "Sync suggested_area to device registry",
           "sync_name": "Sync device name to device registry",
-          "overwrite_existing": "Overwrite existing values"
+          "overwrite_existing": "Overwrite existing values",
+          "parse_area_from_name": "Parse area from device name",
+          "name_delimiters": "Name delimiters"
         },
         "data_description": {
           "discovery_prefix": "MQTT discovery topic prefix (default: homeassistant)",
           "sync_area": "Update device area when suggested_area is present in discovery",
           "sync_name": "Update device name when name is present in discovery",
-          "overwrite_existing": "Overwrite values even if already set by user"
+          "overwrite_existing": "Overwrite values even if already set by user",
+          "parse_area_from_name": "Extract area from device name (e.g., 'Living Room / Plug' or 'Kitchen Motion'). Only used when suggested_area is not present.",
+          "name_delimiters": "Delimiters to split area from name (comma-separated, e.g., ' / , - ')"
         }
       }
     }
