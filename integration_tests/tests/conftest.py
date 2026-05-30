@@ -51,10 +51,13 @@ class HomeAssistantClient:
 
     async def onboard(self) -> str:
         """Complete onboarding and get auth token."""
+        client_id = f"{self.base_url}/"
+
         # Create owner account
         async with self._session.post(
             f"{self.base_url}/api/onboarding/users",
             json={
+                "client_id": client_id,
                 "name": "Test User",
                 "username": "test",
                 "password": "testpassword123",
@@ -62,7 +65,8 @@ class HomeAssistantClient:
             },
         ) as resp:
             if resp.status != 200:
-                raise RuntimeError(f"Failed to create user: {resp.status}")
+                text = await resp.text()
+                raise RuntimeError(f"Failed to create user: {resp.status} - {text}")
             data = await resp.json()
             auth_code = data.get("auth_code")
 
