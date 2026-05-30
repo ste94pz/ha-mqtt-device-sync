@@ -317,17 +317,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = MqttDeviceSyncCoordinator(hass, entry)
     prefix = entry.options.get(CONF_DISCOVERY_PREFIX, DEFAULT_DISCOVERY_PREFIX)
-    topic = f"{prefix}/+/+/config"
 
-    unsubscribe = await mqtt.async_subscribe(hass, topic, coordinator.handle_message)
+    # Subscribe to both topic formats:
+    # - {prefix}/+/+/config - simple format without node_id
+    # - {prefix}/+/+/+/config - Z2M and others with node_id
+    topic_simple = f"{prefix}/+/+/config"
+    topic_with_node = f"{prefix}/+/+/+/config"
 
-    entry.async_on_unload(unsubscribe)
+    unsubscribe_simple = await mqtt.async_subscribe(
+        hass, topic_simple, coordinator.handle_message
+    )
+    unsubscribe_node = await mqtt.async_subscribe(
+        hass, topic_with_node, coordinator.handle_message
+    )
+
+    entry.async_on_unload(unsubscribe_simple)
+    entry.async_on_unload(unsubscribe_node)
     entry.async_on_unload(coordinator.cancel_pending)
     entry.async_on_unload(entry.add_update_listener(async_options_updated))
 
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
 
-    _LOGGER.info("MQTT Device Sync subscribed to %s", topic)
+    _LOGGER.info(
+        "MQTT Device Sync subscribed to %s and %s", topic_simple, topic_with_node
+    )
     return True
 
 

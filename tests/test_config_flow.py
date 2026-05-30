@@ -86,7 +86,8 @@ class TestOptionsFlow:
         config_entry = MagicMock()
         config_entry.options = {}
 
-        flow = MqttDeviceSyncOptionsFlow(config_entry)
+        flow = MqttDeviceSyncOptionsFlow()
+        flow._config_entry = config_entry  # Set via internal attribute
 
         result = await flow.async_step_init(user_input=None)
 
@@ -113,7 +114,8 @@ class TestOptionsFlow:
             CONF_OVERWRITE_EXISTING: True,
         }
 
-        flow = MqttDeviceSyncOptionsFlow(config_entry)
+        flow = MqttDeviceSyncOptionsFlow()
+        flow._config_entry = config_entry  # Set via internal attribute
 
         result = await flow.async_step_init(user_input=None)
 
@@ -127,7 +129,8 @@ class TestOptionsFlow:
         config_entry = MagicMock()
         config_entry.options = {}
 
-        flow = MqttDeviceSyncOptionsFlow(config_entry)
+        flow = MqttDeviceSyncOptionsFlow()
+        flow._config_entry = config_entry  # Set via internal attribute
 
         user_input = {
             CONF_DISCOVERY_PREFIX: "my_prefix",
@@ -148,5 +151,5 @@ class TestOptionsFlow:
 
         handler = MqttDeviceSyncConfigFlow.async_get_options_flow(config_entry)
 
+        # Modern HA: config_entry is set by HA after flow creation, not in constructor
         assert isinstance(handler, MqttDeviceSyncOptionsFlow)
-        assert handler.config_entry == config_entry

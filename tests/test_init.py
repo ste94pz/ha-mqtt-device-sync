@@ -19,7 +19,7 @@ class TestSetupEntry:
 
     @pytest.mark.asyncio
     async def test_setup_subscribes_to_mqtt(self, hass, config_entry):
-        """Test setup subscribes to MQTT discovery topic."""
+        """Test setup subscribes to MQTT discovery topics (both patterns)."""
         mock_unsubscribe = MagicMock()
 
         with patch(
@@ -31,12 +31,13 @@ class TestSetupEntry:
             result = await async_setup_entry(hass, config_entry)
 
             assert result is True
-            mock_subscribe.assert_called_once()
+            # Should subscribe to both simple and node_id patterns
+            assert mock_subscribe.call_count == 2
 
-            # Check topic pattern
-            call_args = mock_subscribe.call_args
-            topic = call_args[0][1]
-            assert topic == "homeassistant/+/+/config"
+            # Check both topic patterns
+            topics = [call[0][1] for call in mock_subscribe.call_args_list]
+            assert "homeassistant/+/+/config" in topics
+            assert "homeassistant/+/+/+/config" in topics
 
     @pytest.mark.asyncio
     async def test_setup_uses_custom_prefix(self, hass, config_entry):
@@ -51,9 +52,11 @@ class TestSetupEntry:
 
             await async_setup_entry(hass, config_entry)
 
-            call_args = mock_subscribe.call_args
-            topic = call_args[0][1]
-            assert topic == "my_ha/+/+/config"
+            # Should subscribe to both patterns with custom prefix
+            assert mock_subscribe.call_count == 2
+            topics = [call[0][1] for call in mock_subscribe.call_args_list]
+            assert "my_ha/+/+/config" in topics
+            assert "my_ha/+/+/+/config" in topics
 
     @pytest.mark.asyncio
     async def test_setup_registers_unload_callbacks(self, hass, config_entry):
