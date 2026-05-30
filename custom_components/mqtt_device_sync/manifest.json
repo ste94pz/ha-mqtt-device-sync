@@ -1,12 +1,12 @@
 {
   "domain": "mqtt_device_sync",
   "name": "MQTT Device Sync",
-  "codeowners": [],
+  "codeowners": ["@MarkAtwood"],
   "config_flow": true,
   "dependencies": ["mqtt"],
-  "documentation": "https://github.com/yourusername/ha-mqtt-device-sync",
+  "documentation": "https://github.com/MarkAtwood/ha-mqtt-device-sync",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/yourusername/ha-mqtt-device-sync/issues",
+  "issue_tracker": "https://github.com/MarkAtwood/ha-mqtt-device-sync/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
