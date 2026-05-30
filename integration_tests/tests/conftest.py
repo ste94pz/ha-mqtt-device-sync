@@ -40,7 +40,8 @@ class HomeAssistantClient:
         start = time.time()
         while time.time() - start < timeout:
             try:
-                async with self._session.get(f"{self.base_url}/api/") as resp:
+                # Use /api/onboarding which doesn't require auth on fresh install
+                async with self._session.get(f"{self.base_url}/api/onboarding") as resp:
                     if resp.status == 200:
                         return True
             except aiohttp.ClientError:
