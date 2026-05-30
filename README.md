@@ -78,7 +78,9 @@ Matching is case-insensitive and longest match wins (so "Living Room" matches be
 
 ## How It Works
 
-1. Subscribes to `{prefix}/+/+/config` MQTT topics
+1. Subscribes to MQTT discovery topics:
+   - `{prefix}/+/+/config` (standard format)
+   - `{prefix}/+/+/+/config` (Zigbee2MQTT format with node_id)
 2. Parses device info from discovery payloads
 3. Looks up device in HA's device registry by identifiers
 4. Updates area and/or name if configured
@@ -94,12 +96,38 @@ Repeated discovery messages with the same values are ignored to avoid spamming t
 
 ## Compatibility
 
-Works with any MQTT discovery source:
+### Tested MQTT Sources
 
-- **Zigbee2MQTT** - Set `homeassistant.legacy_entity_attributes: false` and configure `suggested_area` in device settings
-- **rtl-haos** - Uses `suggested_area` for auto-discovered sensors
-- **Tasmota** - Use "Parse area from name" with naming convention like "Room / Device"
-- **ESPHome** - Set `suggested_area` in device config
+| Source | suggested_area | Notes |
+|--------|---------------|-------|
+| **Zigbee2MQTT** | ✅ Yes | Configure in Z2M device settings or use name parsing |
+| **ESPHome** | ✅ Yes | Set `suggested_area` in device config |
+| **Tasmota** | ❌ No | Use "Parse area from name" with naming like "Room / Device" |
+| **rtl_433** | ❌ No | Use "Parse area from name" |
+| **OpenMQTTGateway** | ❌ No | Use "Parse area from name" |
+| **Valetudo** | ✅ Yes | Robot vacuum integration |
+| **IOTLink** | ❌ No | Windows PC monitoring |
+| **room-assistant** | ✅ Yes | Presence detection |
+| **Nuki** | ❌ No | Smart locks via MQTT |
+
+### Protocol Support
+
+This integration supports the full Home Assistant MQTT discovery specification:
+
+- **Topic formats**: Both 3-segment and 4-segment paths
+- **Abbreviated fields**: `dev`, `ids`, `cns`, `sa` (per HA spec)
+- **Identifier types**: Both `identifiers` and `connections` arrays
+- **All identifier formats**: MAC addresses, ChipIDs, custom strings
+
+### Source-Specific Tips
+
+**Zigbee2MQTT**: Set `homeassistant.legacy_entity_attributes: false` in configuration. Configure `suggested_area` per-device in the Z2M frontend, or use "Parse area from name" with friendly names like "Living Room / Light".
+
+**ESPHome**: Add `suggested_area: "Room Name"` to your device config.
+
+**Tasmota**: Enable "Parse area from name" and use naming convention like "Kitchen / Coffee Maker" via `DeviceName` setting.
+
+**rtl_433**: Use "Parse area from name" with device naming, or rename devices after discovery.
 
 ## Troubleshooting
 
