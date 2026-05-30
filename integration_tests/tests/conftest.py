@@ -61,17 +61,20 @@ class HomeAssistantClient:
                 "language": "en",
             },
         ) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                self.token = data.get("auth_code")
+            if resp.status != 200:
+                raise RuntimeError(f"Failed to create user: {resp.status}")
+            data = await resp.json()
+            auth_code = data.get("auth_code")
 
-        # Get long-lived token
+        if not auth_code:
+            raise RuntimeError("No auth_code returned from onboarding")
+
+        # Exchange auth_code for access token
         async with self._session.post(
             f"{self.base_url}/auth/token",
             data={
-                "grant_type": "password",
-                "username": "test",
-                "password": "testpassword123",
+                "grant_type": "authorization_code",
+                "code": auth_code,
                 "client_id": f"{self.base_url}/",
             },
         ) as resp:
@@ -80,7 +83,7 @@ class HomeAssistantClient:
                 self.token = data["access_token"]
                 return self.token
 
-        raise RuntimeError("Failed to onboard")
+        raise RuntimeError("Failed to exchange auth_code for token")
 
     async def _request(
         self, method: str, endpoint: str, **kwargs
@@ -205,29 +208,33 @@ class MQTTClient:
         self.client.publish(topic, "", retain=True)
 
 
+# Module-level token storage so we only onboard once
+_cached_token: str | None = None
+
+
 @pytest_asyncio.fixture
 async def ha_client():
     """Create and setup Home Assistant client."""
+    global _cached_token
+
     async with HomeAssistantClient(HA_URL) as client:
         # Wait for HA to be ready
         assert await client.wait_for_ready(), "HA did not become ready"
 
-        # Onboard and get token
-        try:
-            await client.onboard()
-        except RuntimeError:
-            # Already onboarded, try to login
-            async with client._session.post(
-                f"{client.base_url}/auth/token",
-                data={
-                    "grant_type": "password",
-                    "username": "test",
-                    "password": "testpassword123",
-                    "client_id": f"{client.base_url}/",
-                },
-            ) as resp:
-                data = await resp.json()
-                client.token = data["access_token"]
+        if _cached_token:
+            # Reuse existing token
+            client.token = _cached_token
+        else:
+            # First test - need to onboard
+            try:
+                token = await client.onboard()
+                _cached_token = token
+            except RuntimeError as e:
+                # Already onboarded from a previous run - need fresh HA instance
+                raise RuntimeError(
+                    f"HA already onboarded but no cached token. "
+                    f"Run 'podman-compose down -v' to reset. Error: {e}"
+                )
 
         yield client
 
