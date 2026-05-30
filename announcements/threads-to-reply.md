@@ -28,3 +28,10 @@
 ## Note
 
 Some threads are old (2020-2022) but still get search traffic. A reply pointing to the solution helps future searchers.
+
+## Posted Announcements
+
+| Platform | URL | Date |
+|----------|-----|------|
+| Zigbee2MQTT | https://github.com/Koenkk/zigbee2mqtt/discussions/32141 | 2026-05-30 |
+| Tasmota | https://github.com/arendst/Tasmota/discussions/24810 | 2026-05-30 |
