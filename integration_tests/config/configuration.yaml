@@ -16,12 +16,8 @@ homeassistant:
 # Enable API
 api:
 
-# MQTT configuration
-mqtt:
-  broker: mosquitto
-  port: 1883
-  discovery: true
-  discovery_prefix: homeassistant
+# MQTT is configured via config flow in the test fixture
+# (YAML-based MQTT config was removed in modern HA)
 
 # Logger for debugging
 logger:

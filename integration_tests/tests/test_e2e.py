@@ -16,21 +16,17 @@ class TestIntegrationSetup:
 
     @pytest.mark.asyncio
     async def test_mqtt_integration_setup(self, ha_client):
-        """MQTT integration should be configurable."""
-        # May already be set up via config, so we just verify it's working
-        # by checking we can access the API
+        """MQTT integration should be configured by fixture."""
+        # Fixture sets up MQTT and mqtt_device_sync
+        # Just verify we have a valid token
         assert ha_client.token is not None
 
     @pytest.mark.asyncio
     async def test_mqtt_device_sync_setup(self, ha_client):
-        """MQTT Device Sync integration should be configurable."""
-        try:
-            await ha_client.setup_mqtt_device_sync()
-        except RuntimeError as e:
-            if "already_configured" in str(e).lower():
-                pass  # Already set up
-            else:
-                raise
+        """MQTT Device Sync integration should be configured by fixture."""
+        # Fixture handles setup - verify we can access the API
+        devices = await ha_client.get_devices()
+        assert devices is not None
 
 
 class TestAreaSync:
@@ -39,12 +35,6 @@ class TestAreaSync:
     @pytest.mark.asyncio
     async def test_device_gets_area_from_discovery(self, ha_client, mqtt_client):
         """Device should get area from suggested_area in discovery."""
-        # Ensure integration is set up
-        try:
-            await ha_client.setup_mqtt_device_sync()
-        except RuntimeError:
-            pass
-
         # Publish discovery message with suggested_area
         mqtt_client.publish_discovery(
             "sensor",
