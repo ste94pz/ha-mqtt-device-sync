@@ -1,0 +1,8 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "ha_mqtt_device_sync",
+  "project_id": "764a31fb-e160-41a6-abdf-ab8c9d3f9e59",
+  "global_dolt_database": "beads_global"
+}
