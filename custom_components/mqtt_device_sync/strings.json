@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MQTT Device Sync",
+        "description": "This integration syncs device metadata (area, name) from MQTT discovery payloads to the Home Assistant device registry."
+      }
+    },
+    "abort": {
+      "already_configured": "MQTT Device Sync is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "MQTT Device Sync Options",
+        "data": {
+          "discovery_prefix": "Discovery prefix",
+          "sync_area": "Sync suggested_area to device registry",
+          "sync_name": "Sync device name to device registry",
+          "overwrite_existing": "Overwrite existing values"
+        },
+        "data_description": {
+          "discovery_prefix": "MQTT discovery topic prefix (default: homeassistant)",
+          "sync_area": "Update device area when suggested_area is present in discovery",
+          "sync_name": "Update device name when name is present in discovery",
+          "overwrite_existing": "Overwrite values even if already set by user"
+        }
+      }
+    }
+  }
+}
