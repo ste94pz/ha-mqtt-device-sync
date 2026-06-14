@@ -1,0 +1,38 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MQTT Device Sync",
+        "description": "Questa integrazione sincronizza i metadati del dispositivo (area, nome) dai payload di discovery MQTT al registro dei dispositivi di Home Assistant."
+      }
+    },
+    "abort": {
+      "already_configured": "MQTT Device Sync è già configurato."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni MQTT Device Sync",
+        "data": {
+          "discovery_prefix": "Prefisso discovery",
+          "sync_area": "Sincronizza suggested_area al registro dei dispositivi",
+          "sync_name": "Sincronizza nome dispositivo al registro dei dispositivi",
+          "overwrite_existing": "Sovrascrivi valori esistenti",
+          "parse_area_from_name": "Estrai area dal nome del dispositivo",
+          "name_delimiters": "Delimitatori dei nomi",
+          "capitalize_parsed_name": "Capitalizza area e nome dopo il parsing"
+        },
+        "data_description": {
+          "discovery_prefix": "Prefisso argomento MQTT discovery (predefinito: homeassistant)",
+          "sync_area": "Aggiorna l'area del dispositivo quando suggested_area è presente nella discovery",
+          "sync_name": "Aggiorna il nome del dispositivo quando name è presente nella discovery",
+          "overwrite_existing": "Sovrascrivi i valori anche se già impostati dall'utente",
+          "parse_area_from_name": "Estrai area dal nome del dispositivo (es. 'Living Room / Plug' o 'Kitchen Motion'). Utilizzato solo quando suggested_area non è presente.",
+          "name_delimiters": "Delimitatori per dividere area da nome (separati da virgola, es. ' / , - ')",
+          "capitalize_parsed_name": "Capitalizza la prima lettera di area e nome dopo il parsing (es. 'living room' → 'Living room')"
+        }
+      }
+    }
+  }
+}
