@@ -20,7 +20,8 @@
           "sync_name": "Sync device name to device registry",
           "overwrite_existing": "Overwrite existing values",
           "parse_area_from_name": "Parse area from device name",
-          "name_delimiters": "Name delimiters"
+          "name_delimiters": "Name delimiters",
+          "capitalize_parsed_name": "Capitalize area and name after parsing"
         },
         "data_description": {
           "discovery_prefix": "MQTT discovery topic prefix (default: homeassistant)",
@@ -28,7 +29,8 @@
           "sync_name": "Update device name when name is present in discovery",
           "overwrite_existing": "Overwrite values even if already set by user",
           "parse_area_from_name": "Extract area from device name (e.g., 'Living Room / Plug' or 'Kitchen Motion'). Only used when suggested_area is not present.",
-          "name_delimiters": "Delimiters to split area from name (comma-separated, e.g., ' / , - ')"
+          "name_delimiters": "Delimiters to split area from name (comma-separated, e.g., ' / , - ')",
+          "capitalize_parsed_name": "Capitalize the first letter of area and name after parsing (e.g., 'living room' → 'Living room')"
         }
       }
     }
