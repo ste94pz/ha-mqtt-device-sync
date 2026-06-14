@@ -15,12 +15,14 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr
 from homeassistant.helpers.event import async_call_later
 
 from .const import (
+    CONF_CAPITALIZE_PARSED_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_NAME_DELIMITERS,
     CONF_OVERWRITE_EXISTING,
     CONF_PARSE_AREA_FROM_NAME,
     CONF_SYNC_AREA,
     CONF_SYNC_NAME,
+    DEFAULT_CAPITALIZE_PARSED_NAME,
     DEFAULT_DISCOVERY_PREFIX,
     DEFAULT_NAME_DELIMITERS,
     DEFAULT_OVERWRITE_EXISTING,
@@ -78,10 +80,28 @@ class MqttDeviceSyncCoordinator:
         return self.entry.options.get(CONF_PARSE_AREA_FROM_NAME, DEFAULT_PARSE_AREA_FROM_NAME)
 
     @property
+    def capitalize_parsed_name(self) -> bool:
+        """Return capitalize_parsed_name option."""
+        return self.entry.options.get(CONF_CAPITALIZE_PARSED_NAME, DEFAULT_CAPITALIZE_PARSED_NAME)
+
+    @property
     def name_delimiters(self) -> list[str]:
         """Return list of name delimiters."""
         delim_str = self.entry.options.get(CONF_NAME_DELIMITERS, DEFAULT_NAME_DELIMITERS)
         return [d.strip() for d in delim_str.split(",") if d.strip()]
+
+    def _capitalize_first_letter(self, text: str) -> str:
+        """Capitalize the first letter of text.
+        
+        Args:
+            text: The text to capitalize
+            
+        Returns:
+            Text with first letter capitalized
+        """
+        if not text:
+            return text
+        return text[0].upper() + text[1:] if len(text) > 0 else text
 
     def parse_area_from_device_name(self, name: str) -> tuple[str | None, str | None]:
         """Parse area and device name from a device name string.
@@ -101,6 +121,11 @@ class MqttDeviceSyncCoordinator:
                 area = parts[0].strip()
                 device = parts[1].strip() if len(parts) > 1 else ""
                 if area and device:
+                    # Apply capitalization if enabled
+                    if self.capitalize_parsed_name:
+                        area = self._capitalize_first_letter(area)
+                        device = self._capitalize_first_letter(device)
+                    
                     _LOGGER.debug(
                         "Parsed area from name: '%s' -> area='%s', name='%s'",
                         name, area, device
@@ -121,6 +146,10 @@ class MqttDeviceSyncCoordinator:
             if name.lower().startswith(area_name.lower()):
                 remainder = name[len(area_name):].strip()
                 if remainder:
+                    # Apply capitalization if enabled
+                    if self.capitalize_parsed_name:
+                        remainder = self._capitalize_first_letter(remainder)
+                    
                     _LOGGER.debug(
                         "Matched existing area in name: '%s' -> area='%s', name='%s'",
                         name, area_name, remainder
